@@ -1,0 +1,648 @@
+/*
+ * The app is meant to read as an object, not a form: a dark anodised body with
+ * an engraved dial, a recessed LCD, and knurled controls. Deliberately a single
+ * dark look rather than a light and dark pair -- a light meter is a device, and
+ * a dark one does not blind you at a night shoot.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --body-dark: #0e1013;
+  --body: #191c21;
+  --body-light: #23272e;
+  --edge-light: rgba(255, 255, 255, 0.07);
+  --edge-dark: rgba(0, 0, 0, 0.6);
+
+  --ink: #e8e6e1;
+  --ink-dim: #9aa0a8;
+  --ink-faint: #626871;
+
+  --lcd-bg: #0b1410;
+  --lcd-ink: #7dffb0;
+  --lcd-glow: rgba(125, 255, 176, 0.35);
+
+  --amber: #ffb454;
+  --danger: #ff6b5e;
+  --needle: #ff5a4d;
+
+  --radius: 18px;
+  --track-item: 60px;
+
+  font-synthesis-weight: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(120% 80% at 50% 0%, #262b33 0%, #0b0d10 60%, #07080a 100%);
+  color: var(--ink);
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  padding: clamp(8px, 3vw, 32px) clamp(8px, 3vw, 24px) 48px;
+  display: flex;
+  justify-content: center;
+}
+
+/* ---------------------------------------------------------------- the body */
+
+.meter {
+  position: relative;
+  width: min(460px, 100%);
+  max-width: 100%;
+  padding: 20px 18px 22px;
+  border-radius: calc(var(--radius) + 8px);
+  background: linear-gradient(180deg, var(--body-light) 0%, var(--body) 22%, var(--body-dark) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.7),
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 24px 60px -12px rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Four screws, because the body should look like it was assembled. */
+.screw {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a505a, #22262c 70%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.25),
+    0 1px 1px rgba(0, 0, 0, 0.6);
+}
+.screw::after {
+  content: '';
+  position: absolute;
+  inset: 3px 1px;
+  border-top: 1px solid rgba(0, 0, 0, 0.55);
+  transform: rotate(28deg);
+}
+.screw--tl { top: 10px; left: 10px; }
+.screw--tr { top: 10px; right: 10px; }
+.screw--bl { bottom: 10px; left: 10px; }
+.screw--br { bottom: 10px; right: 10px; }
+
+/* ------------------------------------------------------------- name plate */
+
+.plate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+}
+
+.plate h1 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.plate p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+}
+
+.plate__button {
+  flex: none;
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  background: linear-gradient(180deg, #2b3038, #1c2026);
+  border: 1px solid var(--edge-dark);
+  border-top-color: var(--edge-light);
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+.plate__button:active { transform: translateY(1px); }
+.plate__button[aria-expanded='true'] { color: var(--amber); }
+
+/* ------------------------------------------------------------------ gauge */
+
+.gauge {
+  padding: 6px 0 0;
+}
+
+.gauge svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.gauge__face { fill: url(#faceGradient); }
+.gauge__tick { stroke: var(--ink-faint); }
+.gauge__tick--major { stroke: var(--ink-dim); }
+.gauge__label {
+  fill: var(--ink-dim);
+  font-size: 9px;
+  font-weight: 600;
+  text-anchor: middle;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+.gauge__band { fill: none; stroke-linecap: round; }
+/* The origin is set inline by the gauge, which knows where the pivot is. */
+.gauge__needle {
+  transition: transform 420ms cubic-bezier(0.22, 1.4, 0.4, 1);
+}
+.gauge__cap { fill: url(#capGradient); }
+
+/* -------------------------------------------------------------------- LCD */
+
+.lcd {
+  position: relative;
+  padding: 14px 16px 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #071009 0%, var(--lcd-bg) 100%);
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(125, 255, 176, 0.08),
+    0 1px 0 var(--edge-light);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  overflow: hidden;
+}
+
+/* The faint sheen of a piece of glass over the display. */
+.lcd::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(103deg, rgba(255, 255, 255, 0.06) 0 32%, transparent 32.5%);
+  pointer-events: none;
+}
+
+.lcd__head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(125, 255, 176, 0.55);
+}
+
+.lcd__value {
+  margin: 2px 0 0;
+  font-size: clamp(44px, 15vw, 62px);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--lcd-ink);
+  text-shadow: 0 0 18px var(--lcd-glow);
+  font-variant-numeric: tabular-nums;
+}
+
+.lcd__context {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: rgba(125, 255, 176, 0.7);
+}
+
+.lcd__drift {
+  min-height: 15px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgba(125, 255, 176, 0.45);
+}
+
+.lcd[data-status='too-much-light'],
+.lcd[data-status='too-little-light'] {
+  --lcd-ink: #ffb4a8;
+  --lcd-glow: rgba(255, 107, 94, 0.3);
+  background: linear-gradient(180deg, #150907 0%, #10100c 100%);
+}
+.lcd[data-status='too-much-light'] .lcd__head,
+.lcd[data-status='too-little-light'] .lcd__head { color: rgba(255, 180, 168, 0.6); }
+.lcd[data-status='too-much-light'] .lcd__context,
+.lcd[data-status='too-little-light'] .lcd__context { color: rgba(255, 180, 168, 0.7); }
+.lcd[data-status='too-much-light'] .lcd__drift,
+.lcd[data-status='too-little-light'] .lcd__drift { color: rgba(255, 180, 168, 0.5); }
+
+/* -------------------------------------------------------- reading + steps */
+
+.reading__label,
+.solve__label,
+.equivalents h2,
+.field__label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.reading__row {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.step {
+  flex: none;
+  width: 52px;
+  font: inherit;
+  font-size: 22px;
+  color: var(--ink);
+  background: linear-gradient(180deg, #303640, #1e232a);
+  border: 1px solid var(--edge-dark);
+  border-top-color: var(--edge-light);
+  border-radius: 12px;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+.step:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.reading__field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: #0d0f12;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8), 0 1px 0 var(--edge-light);
+}
+
+#lux {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  padding: 0;
+}
+#lux:focus { outline: none; color: var(--amber); }
+#lux::-webkit-outer-spin-button,
+#lux::-webkit-inner-spin-button { appearance: none; margin: 0; }
+#lux[type='number'] { appearance: textfield; }
+
+.reading__unit {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* --------------------------------------------------------- solve-for pads */
+
+.solve { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+
+.solve__group {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 5px;
+  border-radius: 14px;
+  background: #0d0f12;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
+}
+
+.solve__group button {
+  padding: 10px 4px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--ink-dim);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.solve__group button[aria-checked='true'] {
+  color: #10130f;
+  background: linear-gradient(180deg, #cdd6df, #94a0ad);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* ------------------------------------------------------------------ dials */
+
+.dials {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.dial {
+  position: relative;
+  /* Grid and flex children default to min-width:auto, which lets the scrolling
+     track size to its content instead of scrolling. */
+  min-width: 0;
+  padding: 8px 0 4px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #15181c, #101317);
+  box-shadow: inset 0 1px 0 var(--edge-light), inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+}
+
+.dial__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 14px 4px;
+}
+
+.dial__name {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.dial__value {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* The knurled strip you drag. Scroll snapping does the detenting for us. */
+.dial__track {
+  display: flex;
+  min-width: 0;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-block: 2px 6px;
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+}
+.dial__track::-webkit-scrollbar { display: none; }
+.dial__track:focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; border-radius: 8px; }
+
+.dial__item {
+  flex: none;
+  width: var(--track-item);
+  scroll-snap-align: center;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding-top: 4px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+.dial__item::before {
+  content: '';
+  width: 1px;
+  height: 9px;
+  background: currentColor;
+  opacity: 0.5;
+}
+.dial__item[data-full='true']::before { height: 14px; opacity: 0.9; }
+.dial__item[aria-current='true'] { color: var(--ink); }
+
+.dial__pointer {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 2px;
+  height: 30px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, var(--amber), rgba(255, 180, 84, 0.15));
+  box-shadow: 0 0 8px rgba(255, 180, 84, 0.5);
+  pointer-events: none;
+}
+
+/* The dial being solved for is driven by the meter, not by you. */
+.dial[data-driven='true'] { background: linear-gradient(180deg, #14201a, #0f1714); }
+.dial[data-driven='true'] .dial__pointer { background: linear-gradient(180deg, var(--lcd-ink), transparent); box-shadow: 0 0 8px var(--lcd-glow); }
+.dial[data-driven='true'] .dial__value { color: var(--lcd-ink); }
+.dial[data-driven='true'] .dial__track { pointer-events: none; }
+.dial[data-driven='true'] .dial__item[aria-current='true'] { color: var(--lcd-ink); }
+
+/* ---------------------------------------------------------------- notices */
+
+.notices:empty { display: none; }
+.notices { display: grid; gap: 6px; }
+
+.notice {
+  display: flex;
+  gap: 9px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 2px solid var(--ink-faint);
+  color: var(--ink-dim);
+}
+.notice[data-level='warn'] { border-left-color: var(--danger); color: #ffc7c0; background: rgba(255, 107, 94, 0.07); }
+
+/* ------------------------------------------------------------ equivalents */
+
+.equivalents {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.equivalents__scroll {
+  display: flex;
+  min-width: 0;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.equivalent {
+  flex: none;
+  display: grid;
+  gap: 1px;
+  padding: 8px 12px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  text-align: center;
+  color: var(--ink-dim);
+  background: linear-gradient(180deg, #1b1f25, #14171b);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  box-shadow: inset 0 1px 0 var(--edge-light);
+  cursor: pointer;
+}
+.equivalent small { font-size: 11px; color: var(--ink-faint); }
+.equivalent[aria-current='true'] {
+  color: var(--lcd-ink);
+  border-color: rgba(125, 255, 176, 0.45);
+  background: linear-gradient(180deg, #16241d, #101915);
+}
+.equivalent[aria-current='true'] small { color: rgba(125, 255, 176, 0.65); }
+
+/* --------------------------------------------------------------- settings */
+
+/* A display value on the element itself beats the hidden attribute, so the
+   collapsed state has to be restated. */
+.settings[hidden] { display: none; }
+
+.settings {
+  display: grid;
+  gap: 16px;
+  padding: 16px 14px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 1px 0 var(--edge-light);
+}
+
+.settings h2 {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.field { display: grid; gap: 7px; }
+
+.field__label em {
+  float: right;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--ink-dim);
+}
+
+.field select {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: #0d0f12;
+  border: 1px solid var(--edge-dark);
+  border-radius: 10px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.field input[type='range'] {
+  width: 100%;
+  height: 26px;
+  appearance: none;
+  background: none;
+  cursor: pointer;
+}
+.field input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: #0a0c0e;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+.field input[type='range']::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: #0a0c0e;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+.field input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #dfe4ea, #8d97a3 70%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+.field input[type='range']::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #dfe4ea, #8d97a3 70%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.toggles { display: grid; gap: 10px; }
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 13.5px;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+.toggle em {
+  font-style: normal;
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+.toggle span { display: flex; flex-direction: column; }
+.toggle input {
+  flex: none;
+  appearance: none;
+  width: 42px;
+  height: 24px;
+  margin: 0;
+  border-radius: 999px;
+  background: #0a0c0e;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.9);
+  transition: background 160ms ease;
+  cursor: pointer;
+}
+.toggle input::after {
+  content: '';
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 3px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #dfe4ea, #8d97a3 70%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  transition: transform 160ms cubic-bezier(0.3, 1.3, 0.5, 1);
+}
+.toggle input:checked { background: #2c5f43; }
+.toggle input:checked::after { transform: translateX(18px); }
+.toggle input:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+.settings__footnote {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 1ms !important; }
+}

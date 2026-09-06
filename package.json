@@ -1,0 +1,21 @@
+{
+  "name": "incident-light-meter",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Incident light meter exposure calculator for the Fujifilm X-T3",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && node scripts/make-icons.mjs && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "vitest": "^3.2.7"
+  }
+}

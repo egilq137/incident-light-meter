@@ -1,0 +1,16 @@
+{
+  "name": "Incident Light Meter",
+  "short_name": "Light Meter",
+  "description": "Turn an incident meter reading in lux into the settings to dial into a Fujifilm X-T3.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0d10",
+  "theme_color": "#17191c",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
